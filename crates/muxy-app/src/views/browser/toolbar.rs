@@ -85,6 +85,7 @@ pub(super) fn render(
                         .on_click(cx.listener(|view, _, _, cx| view.reload(cx)))
                 })
                 .child(address)
+                .child(element_picker_button(view, cx))
                 .child(external_button(view, cx))
                 .child(profile_button(view, cx)),
         )
@@ -104,18 +105,49 @@ pub(super) fn render(
         .into_any_element()
 }
 
+fn element_picker_button(view: &BrowserView, cx: &mut Context<BrowserView>) -> AnyElement {
+    let enabled = !view.is_blank() && view.page.error.is_none();
+    let color = if view.selecting_element {
+        view.theme.accent
+    } else if enabled {
+        view.theme.fg_muted
+    } else {
+        view.theme.fg_dim
+    };
+    let glyph = IconGlyph::new(Icon::Overlap, view.metrics.icon_md(), color);
+    let tooltip = if view.selecting_element {
+        tr!("Click an element to copy its HTML and text. Press Escape to cancel")
+    } else {
+        tr!("Select an element to copy its HTML and text")
+    };
+    toolbar_button(
+        view,
+        "browser-copy-element",
+        div().child(glyph),
+        tooltip,
+        view.selecting_element,
+        move |view, _, cx| {
+            if enabled {
+                view.toggle_element_picker(cx);
+            }
+        },
+        cx,
+    )
+}
+
 fn external_button(view: &BrowserView, cx: &mut Context<BrowserView>) -> AnyElement {
     let glyph = IconGlyph::new(
         Icon::ExternalLink,
         view.metrics.icon_md(),
         view.theme.fg_muted,
     );
-    menu_button(
+    toolbar_button(
         view,
         "browser-external",
         div().child(glyph),
         tr!("Open in External Browser"),
-        Menu::External,
+        false,
+        |_, event, cx| cx.emit(BrowserViewEvent::Menu(Menu::External, event.position)),
         cx,
     )
 }
@@ -140,12 +172,13 @@ fn profile_button(view: &BrowserView, cx: &mut Context<BrowserView>) -> AnyEleme
                 .text_color(theme.fg_muted)
                 .child(view.profile.name().to_owned()),
         );
-    menu_button(
+    toolbar_button(
         view,
         "browser-profile",
         content,
         tr!("Browser Profile"),
-        Menu::Profile,
+        false,
+        |_, event, cx| cx.emit(BrowserViewEvent::Menu(Menu::Profile, event.position)),
         cx,
     )
 }
@@ -202,19 +235,20 @@ fn address(
         }))
 }
 
-fn menu_button(
+fn toolbar_button(
     view: &BrowserView,
     id: &'static str,
     content: gpui::Div,
     tooltip: SharedString,
-    menu: Menu,
+    selected: bool,
+    action: impl Fn(&mut BrowserView, &gpui::MouseDownEvent, &mut Context<BrowserView>) + 'static,
     cx: &mut Context<BrowserView>,
 ) -> AnyElement {
     let theme = &view.theme;
     let metrics = view.metrics;
     let (background, foreground, border, theme_background) =
         (theme.surface, theme.fg, theme.border, theme.bg);
-    div()
+    let button = div()
         .id(id)
         .flex()
         .flex_none()
@@ -224,6 +258,7 @@ fn menu_button(
         .rounded(metrics.radius_sm())
         .cursor_pointer()
         .hover(|style| style.bg(theme.hover))
+        .when(selected, |button| button.bg(theme.accent_soft))
         .tooltip(move |_, cx| {
             cx.new(|_| {
                 muxy_ui::components::Tooltip::new(
@@ -235,12 +270,13 @@ fn menu_button(
                 )
             })
             .into()
-        })
+        });
+    button
         .on_mouse_down(
             MouseButton::Left,
-            cx.listener(move |_, event: &gpui::MouseDownEvent, _, cx| {
+            cx.listener(move |view, event: &gpui::MouseDownEvent, _, cx| {
                 cx.stop_propagation();
-                cx.emit(BrowserViewEvent::Menu(menu, event.position));
+                action(view, event, cx);
             }),
         )
         .child(content)
