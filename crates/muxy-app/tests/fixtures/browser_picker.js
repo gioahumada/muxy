@@ -102,6 +102,41 @@ element.dispatchEvent(badMove);
 check(await result === 'hover failed', 'hover error did not reject');
 clean();
 
+const button = document.createElement('button');
+button.textContent = 'Copy without activating';
+document.body.append(button);
+const mouseEvents = ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'];
+const pageEvents = [];
+for (const type of mouseEvents) {
+    button.addEventListener(type, () => {
+        pageEvents.push(type);
+        button.textContent = 'Activated';
+    });
+}
+const press = () => mouseEvents.map(type => {
+    const Constructor = type.startsWith('pointer') ? PointerEvent : MouseEvent;
+    return button.dispatchEvent(new Constructor(type, { bubbles: true, cancelable: true }));
+});
+result = run();
+move(button);
+const allowed = press();
+selected = await result;
+check(pageEvents.length === 0, 'picking activated page mouse handlers: ' + pageEvents.join(', '));
+check(allowed.every(value => !value), 'picking allowed default mouse actions');
+check(selected.text === 'Copy without activating', 'page action changed the copied text');
+clean();
+press();
+check(pageEvents.join() === mouseEvents.join(), 'mouse handlers not restored after copying');
+pageEvents.length = 0;
+result = run();
+move(button);
+cancel();
+check(await result === null, 'cancellation returned data');
+clean();
+press();
+check(pageEvents.join() === mouseEvents.join(), 'mouse handlers not restored after cancellation');
+button.remove();
+
 document.body.innerHTML = '<p id="unicode"></p>';
 element = document.getElementById('unicode');
 const prefix = '<p id="unicode">';

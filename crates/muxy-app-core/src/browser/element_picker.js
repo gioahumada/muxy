@@ -81,7 +81,10 @@ return await new Promise((resolve, reject) => {
       properties[index].applied = style.getPropertyValue(name);
     }
   });
-  const pressed = guarded(event => event.stopImmediatePropagation());
+  const pressed = guarded(event => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  });
   const clicked = guarded(event => {
     const element = target(event);
     if (!element) return;
@@ -89,7 +92,6 @@ return await new Promise((resolve, reject) => {
     event.stopImmediatePropagation();
     restore();
     const bounds = element.getBoundingClientRect();
-    // shortcut: outerHTML serializes the full subtree; use bounded traversal if large selections stall.
     const html = excerpt(element.outerHTML, pickerLimits.html);
     const text = excerpt(String(element.innerText ?? element.textContent ?? ''), pickerLimits.text);
     finish({
@@ -109,7 +111,7 @@ return await new Promise((resolve, reject) => {
   });
   const listeners = [
     ['pointermove', moved], ['pointerdown', pressed], ['pointerup', pressed],
-    ['click', clicked], ['keydown', keyed],
+    ['mousedown', pressed], ['mouseup', pressed], ['click', clicked], ['keydown', keyed],
   ];
   const picker = { cancel: () => finish(null) };
   window[key] = picker;

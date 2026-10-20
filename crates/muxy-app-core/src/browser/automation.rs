@@ -19,7 +19,6 @@ pub const CANCEL_ELEMENT_PICKER: &str = "window.__muxyDomPicker?.cancel(); retur
 pub const ELEMENT_HTML_LIMIT: usize = 500;
 pub const ELEMENT_TEXT_LIMIT: usize = 1_000_000;
 
-/// Lets the user choose an element, returning bounded DOM data and viewport bounds.
 pub fn element_picker_script(accent: &str) -> String {
     format!(
         "{HELPERS}\nconst pickerAccent = {};\nconst pickerLimits = {{ html: {ELEMENT_HTML_LIMIT}, text: {ELEMENT_TEXT_LIMIT} }};\n{}",

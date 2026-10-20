@@ -866,7 +866,6 @@ fn accent_channel(value: f32) -> u8 {
     (value.clamp(0.0, 1.0) * 255.0).round() as u8
 }
 
-/// Formats the picker result, retaining limits at the page-to-app boundary.
 fn element_clipboard_text(selection: &serde_json::Value) -> Option<String> {
     use browser::automation::{ELEMENT_HTML_LIMIT, ELEMENT_TEXT_LIMIT};
     let url = selection.get("url")?.as_str()?;

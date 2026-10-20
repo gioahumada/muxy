@@ -1,12 +1,15 @@
 //! The browser's toolbar, address suggestions, and find bar.
 
+use std::rc::Rc;
+
 use gpui::prelude::FluentBuilder;
 use gpui::{
-    AnyElement, AppContext, Context, Focusable, InteractiveElement, IntoElement, MouseButton,
-    ParentElement, SharedString, StatefulInteractiveElement, Styled, Window, canvas, deferred, div,
-    img, px, relative,
+    AnyElement, AppContext, Context, Entity, Focusable, InteractiveElement, IntoElement,
+    MouseButton, ParentElement, Render, SharedString, StatefulInteractiveElement, Styled, Window,
+    canvas, deferred, div, img, px, relative,
 };
-use muxy_ui::components::{IconButton, IconGlyph};
+use muxy_ui::browser::NativeBrowser;
+use muxy_ui::components::{IconButton, IconGlyph, Tooltip};
 use muxy_ui::icon::Icon;
 use muxy_ui::tr;
 
@@ -248,6 +251,7 @@ fn toolbar_button(
     let metrics = view.metrics;
     let (background, foreground, border, theme_background) =
         (theme.surface, theme.fg, theme.border, theme.bg);
+    let native = view.native.clone();
     let button = div()
         .id(id)
         .flex()
@@ -260,14 +264,18 @@ fn toolbar_button(
         .hover(|style| style.bg(theme.hover))
         .when(selected, |button| button.bg(theme.accent_soft))
         .tooltip(move |_, cx| {
-            cx.new(|_| {
-                muxy_ui::components::Tooltip::new(
+            let content = cx.new(|_| {
+                Tooltip::new(
                     tooltip.clone(),
                     background,
                     foreground,
                     border,
                     theme_background,
                 )
+            });
+            cx.new(|_| BrowserTooltip {
+                content,
+                native: native.clone(),
             })
             .into()
         });
@@ -281,6 +289,26 @@ fn toolbar_button(
         )
         .child(content)
         .into_any_element()
+}
+
+struct BrowserTooltip {
+    content: Entity<Tooltip>,
+    native: Rc<NativeBrowser>,
+}
+
+impl Render for BrowserTooltip {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        let native = self.native.clone();
+        div().relative().child(self.content.clone()).child(
+            canvas(
+                move |bounds, _, _| native.occlude_also(bounds),
+                |_, (), _, _| (),
+            )
+            .absolute()
+            .inset_0()
+            .size_full(),
+        )
+    }
 }
 
 /// History matching the address field, shown under it. The page's native
