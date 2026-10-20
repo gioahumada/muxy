@@ -35,7 +35,7 @@ pub(super) fn render(
             },
             if enabled { theme.fg } else { theme.fg_dim },
         )
-        .tooltip(tooltip, theme.surface, theme.fg, theme.border, theme.bg)
+        .tooltip(tooltip, theme.raised(), theme.fg, theme.border, theme.bg)
     };
     let loading = view.page.loading;
     let editing = view.address.focus_handle(cx).is_focused(window);
@@ -250,7 +250,7 @@ fn toolbar_button(
     let theme = &view.theme;
     let metrics = view.metrics;
     let (background, foreground, border, theme_background) =
-        (theme.surface, theme.fg, theme.border, theme.bg);
+        (theme.raised(), theme.fg, theme.border, theme.bg);
     let native = view.native.clone();
     let button = div()
         .id(id)
@@ -407,7 +407,7 @@ pub(super) fn find_bar(view: &BrowserView, cx: &mut Context<BrowserView>) -> Opt
             theme.fg_muted,
             theme.fg,
         )
-        .tooltip(tooltip, theme.surface, theme.fg, theme.border, theme.bg)
+        .tooltip(tooltip, theme.raised(), theme.fg, theme.border, theme.bg)
     };
     let missing = find.found == Some(false);
     Some(
